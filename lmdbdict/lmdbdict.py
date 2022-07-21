@@ -235,6 +235,16 @@ class lmdbdict:
     def __iter__(self):
         return (self._key_loads(k) for k, _ in self.db_txn.cursor()
                 if k not in RESERVED)
+    
+    def items(self):
+        return ((self._key_loads(k), self._value_loads(v))
+                for k, v in self.db_txn.cursor()
+                if k not in RESERVED)
+    
+    def values(self):
+        return (self._value_loads(v)
+                for k, v in self.db_txn.cursor()
+                if k not in RESERVED)
 
 # TODO separate the logic between lmdb handling and key, value dumps.
 
