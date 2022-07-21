@@ -33,6 +33,7 @@ class lmdbdict:
         self.lmdb_path = lmdb_path
         self.mode = mode
         self.readahead = readahead
+        self.unsafe = unsafe
         self._init_db()
         if self.db_txn.get(b'__keys__'):
             try:
@@ -54,7 +55,6 @@ class lmdbdict:
         self._init_dumps_loads(value_method, value_dumps, value_loads, which='value')
         self._init_dumps_loads(key_method, key_dumps, key_loads, which='key')
 
-        self.unsafe = unsafe
 
     def _init_dumps_loads(self, method, dumps, loads, which='value'):
         """
