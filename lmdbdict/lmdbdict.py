@@ -229,6 +229,9 @@ class lmdbdict:
         except KeyError:
             self[key] = value
             return value
+        
+    def __iter__(self):
+        return (self._key_loads(k) for k, _ in self.db_txn.cursor())
 
 # TODO separate the logic between lmdb handling and key, value dumps.
 
