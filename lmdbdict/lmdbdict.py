@@ -121,7 +121,11 @@ class lmdbdict:
         return self._keys
 
     def __contains__(self, item):
-        return item in self._keys
+        if item in self._keys:
+            return True
+        if not self.unsafe:
+            return False
+        return self.db_txn.get(self._key_dumps(item)) is not None
 
     def __getstate__(self):
         r"""
@@ -145,13 +149,13 @@ class lmdbdict:
                 readahead=False, map_size=1099511627776 * 2,
                 max_readers=100,
             )
-            self.db_txn = self.env.begin(write=False)
+            self.db_txn = self.env.begin(write=False, buffers=True)
         elif self.mode == 'w':
             self.env = lmdb.open(
                 self.lmdb_path, subdir=False,
                 readonly=False, map_size=1099511627776 * 2,
                 meminit=False, map_async=True)
-            self.db_txn = self.env.begin(write=True)
+            self.db_txn = self.env.begin(write=True, buffers=True)
 
     def __getitem__(self, key):
         if not self.unsafe:
@@ -203,12 +207,15 @@ class lmdbdict:
             self.env.sync()
             self.env.close()
 
-    def flush(self):
+    def flush(self, flush_keys=None):
         assert self.mode == 'w', 'only flush when in write mode'
         # update __keys__ value
-        self.db_txn.put(b'__keys__', pickle.dumps(self._keys))
+        if flush_keys is None:
+            flush_keys = not self.unsafe
+        if flush_keys:
+            self.db_txn.put(b'__keys__', pickle.dumps(self._keys))
         self.db_txn.commit()
-        self.db_txn = self.env.begin(write=True)
+        self.db_txn = self.env.begin(write=True, buffers=True)
 
     def sequential_iter(self):
         c = self.db_txn.cursor()
@@ -216,6 +223,12 @@ class lmdbdict:
             if k not in RESERVED:
                 yield (self._key_loads(k), self._value_loads(v))
 
+    def setdefault(self, key, value):
+        try:
+            return self[key]
+        except KeyError:
+            self[key] = value
+            return value
 
 # TODO separate the logic between lmdb handling and key, value dumps.
 
