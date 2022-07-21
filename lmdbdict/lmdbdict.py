@@ -194,6 +194,8 @@ class lmdbdict:
             self[k] = v
 
     def __len__(self):
+        if self.unsafe:
+            return self.env.stat()['entries']
         return len(self._keys)
 
     def __repr__(self):
